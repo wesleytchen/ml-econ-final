@@ -100,6 +100,7 @@ for state in states_lst:
     state_file2 = state_file2.rename(columns=state_file2.iloc[0]).drop(state_file2.index[0])
     state_file = pd.concat((state_file2, state_file), axis=1)
     state_dict[state] = state_file
+    print(state_file["Average Grade Performance"])
     for i, tax_year in enumerate(tax_lst):
         year = 2017 + i
         state_name = states[state]
