@@ -70,34 +70,42 @@ states = {
 }
 
 path = parent_path + 'data/'
-smoking_file = path + 'Adult_smoking_data.csv'
-smoking_rates = pd.read_csv(smoking_file)
 
 state_taxes_2017 = pd.read_csv(path + 'state_cigarette_rates_2017.csv')
 state_taxes_2018 = pd.read_csv(path + 'state_cigarette_rates_2018.csv')
 state_taxes_2019 = pd.read_csv(path + 'state_cigarette_rates_2019.csv')
 state_taxes_2020 = pd.read_csv(path + 'state_cigarette_rates_2020.csv')
 state_taxes_2021 = pd.read_csv(path + 'state_cigarette_rates_2021.csv')
-print(state_taxes_2017.head())
+#print(state_taxes_2017.head())
 
 yearly_tax_lst = [state_taxes_2017, state_taxes_2018, state_taxes_2019,
                   state_taxes_2020, state_taxes_2021]
 
-tax_dict = {}
-for i, x in enumerate(yearly_tax_lst):
-    year = 2017 + i
+tax_lst = []
+for x in yearly_tax_lst:
     x_fixed = pd.DataFrame(np.concatenate((x.iloc[:, 0:2].values,
                            x.iloc[:, 4:6].values)),
                            columns=['State', 'Tax Rate'])
     x_fixed = x_fixed.dropna(axis=0)
     x_dict = x_fixed.set_index('State').to_dict()
-    tax_dict[str(year)] = x_dict
-print(tax_dict)
-    
+    tax_lst.append(x_dict)
 
-state_files = states
+state_dict = {}
 for state in states_lst:
     state_data = path + states[state] + '.csv'
+    state_data2 = path + states[state] + '2.csv'
     state_file = pd.read_csv(state_data)
-    state_files[state] = state_file
+    state_file2 = pd.read_csv(state_data2)
+    state_file = state_file.rename(columns=state_file.iloc[0]).drop(state_file.index[0])
+    state_file2 = state_file2.rename(columns=state_file2.iloc[0]).drop(state_file2.index[0])
+    state_file = pd.concat((state_file2, state_file), axis=1)
+    state_file = state_file.loc[:,~state_file.columns.duplicated()]
+    state_dict[state] = state_file
+    for i, tax_year in enumerate(tax_lst):
+        year = 2017 + i
+        state_name = states[state]
+        tax_rate = tax_year['Tax Rate'][state_name]
+        state_dict[state]["cig_tax_" + str(year)] = tax_rate
+print(state_dict["CA"][["County", "% Smokers"]])
+
 
