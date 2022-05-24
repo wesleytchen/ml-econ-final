@@ -99,13 +99,12 @@ for state in states_lst:
     state_file = state_file.rename(columns=state_file.iloc[0]).drop(state_file.index[0])
     state_file2 = state_file2.rename(columns=state_file2.iloc[0]).drop(state_file2.index[0])
     state_file = pd.concat((state_file2, state_file), axis=1)
-    state_file = state_file.loc[:,~state_file.columns.duplicated()]
     state_dict[state] = state_file
     for i, tax_year in enumerate(tax_lst):
         year = 2017 + i
         state_name = states[state]
         tax_rate = tax_year['Tax Rate'][state_name]
         state_dict[state]["cig_tax_" + str(year)] = tax_rate
-print(state_dict["CA"][["County", "% Smokers"]])
+print(state_dict["AL"]["Average Grade Performance"])
 
 
