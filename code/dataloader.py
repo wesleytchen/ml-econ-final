@@ -107,5 +107,3 @@ for state in states_lst:
         tax_rate = tax_year['Tax Rate'][state_name]
         state_dict[state]["cig_tax_" + str(year)] = tax_rate
 print(state_dict["AL"]["Average Grade Performance"])
-
-
