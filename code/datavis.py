@@ -72,7 +72,7 @@ relevantfeatures = ["State", "County", "Population", "% Smokers", "% Adults with
 "Average Grade Performance (Math)", "High School Graduation Rate", "% Uninsured", "% Insufficient Sleep", "% Limited Access to Healthy Foods", "% Food Insecure", 
 "% Adults with Diabetes", "% Frequent Mental Distress", "% Frequent Physical Distress", "Life Expectancy"]
 
-abspath = os.path.abspath(os.getcwd())
+abspath = os.path.dirname(os.getcwd())
 parent_path = str(abspath)
 
 def editcolname(filename):
@@ -148,7 +148,7 @@ def createfinaldf():
     #     newrow.append(df[column].isnull().sum())
     # df.loc["Null Values"] = newrow
 
-    df.to_csv("FinalDF.csv")
+    df.to_csv(parent_path + "\\FinalDF.csv")
     
 def createcorrmatrix(frame):
     # Drop columns with too many missing items/incompatible data types, remove counties with null values
@@ -163,7 +163,7 @@ def createcorrmatrix(frame):
         df.loc[col] = [frame[col].corr(frame[col2]) for col2 in frame.columns.tolist()[3:]]
 
     # Write to CorrMatrix
-    df.to_csv("CorrMatrix.csv")
+    df.to_csv(parent_path + "\\CorrMatrix.csv")
 
 def pctsmokercorrelationsvis(frame):
     spr = pd.DataFrame()
