@@ -1,8 +1,10 @@
 from operator import index
+import county_adjacency as ca
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+import re
 import os
 from pathlib import Path
 
@@ -72,7 +74,7 @@ relevantfeatures = ["State", "County", "Population", "% Smokers", "% Adults with
 "Average Grade Performance (Math)", "High School Graduation Rate", "% Uninsured", "% Insufficient Sleep", "% Limited Access to Healthy Foods", "% Food Insecure", 
 "% Adults with Diabetes", "% Frequent Mental Distress", "% Frequent Physical Distress", "Life Expectancy"]
 
-abspath = os.path.dirname(os.getcwd())
+abspath = os.getcwd()
 parent_path = str(abspath)
 
 def editcolname(filename):
@@ -143,19 +145,23 @@ def createfinaldf():
     df = df[relevantfeatures]
 
     # Include null value counts
-    # newrow = []
-    # for column in df.columns:
-    #     newrow.append(df[column].isnull().sum())
-    # df.loc["Null Values"] = newrow
+    newrow = []
+    for column in df.columns:
+        newrow.append(df[column].isnull().sum())
+    df.loc["Null Values"] = newrow
 
     df.to_csv(parent_path + "\\FinalDF.csv")
+
+    return df
     
 def createcorrmatrix(frame):
     # Drop columns with too many missing items/incompatible data types, remove counties with null values
-    frame.drop(["Firearm Fatalities Rate", "Crude Rate", "High School Graduation Rate", "Average Grade Performance (Reading)",
-    "Average Grade Performance (Math)", "Segregation Index", "Presence of Water Violation", "% Uninsured.1"], axis=1, inplace=True)
+    frame.drop(columns=["Firearm Fatalities Rate", "Crude Rate", "High School Graduation Rate", "Average Grade Performance (Reading)",
+    "Average Grade Performance (Math)", "Segregation Index", "Presence of Water Violation", "% Uninsured"], inplace=True)
+    # For some reason % uninsured when not removed gives a duplicate, fix this
+    print(frame.columns)
     frame.dropna(inplace=True)
-    frame[:-1]
+    frame = frame[:-1]
 
     # Fill in correlation values
     df = pd.DataFrame(columns=frame.columns.tolist()[3:])
@@ -164,6 +170,8 @@ def createcorrmatrix(frame):
 
     # Write to CorrMatrix
     df.to_csv(parent_path + "\\CorrMatrix.csv")
+
+    return frame
 
 def pctsmokercorrelationsvis(frame):
     spr = pd.DataFrame()
@@ -178,3 +186,51 @@ def pctsmokercorrelationsvis(frame):
 def correlationmatrixvis(frame):
     sns.heatmap(frame[frame.columns[list(range(1, frame.shape[0]))].tolist()], yticklabels=frame.columns.tolist()[1:])
     plt.show()
+
+def getinterstateadj():
+    counties = ca.supported_areas()
+    isa = []
+
+    for county in counties:
+        state = county.split(", ")[1]
+        adjacencies = ca.get_neighboring_areas(county)
+
+        for adjacency in adjacencies:
+            adjacencystate = adjacency.split(", ")[1]
+            if adjacencystate != state:
+                propercounty = tuple(re.split(" County, | Parish, |, ", county))
+                properadj = tuple(re.split(" County, | Parish, |, ", adjacency))
+                isa.append([propercounty, properadj])
+    
+    return isa
+
+def adjdelta(frame):
+    adjacencypairs = getinterstateadj()
+    result = pd.DataFrame(columns=["County Pair"] + frame.columns.tolist()[3:])
+
+    for pair in adjacencypairs:
+        county1 = pair[0][0]
+        county2 = pair[1][0]
+
+        row1 = frame.loc[frame["County"] == county1]
+        row1 = row1.loc[row1["State"] == states[pair[0][1]]].values.flatten().tolist()
+        row2 = frame.loc[frame["County"] == county2]
+        row2 = row2.loc[row2["State"] == states[pair[1][1]]].values.flatten().tolist()
+
+        trim1 = np.array(row1[3:])
+        trim2 = np.array(row2[3:])
+
+        if trim1.shape[0] == trim2.shape[0] == 48:
+            finalrow = [f"{county1}/{county2}"] + np.subtract(trim1, trim2).tolist()
+            print(len(finalrow))
+            print(finalrow)
+            result.loc[len(result.index)] = finalrow
+
+    result.to_csv(parent_path + "\\AdjacentDelta.csv")
+
+# final = createfinaldf()
+# corrdata = createcorrmatrix(final)
+# adjdelta(corrdata)
+
+# For queueing rows with certain counties: split each county with " County, " and " Parish, " delimiters, then take the first
+# one and use that to queue. Add filter for state as well
