@@ -47,11 +47,13 @@ params_lst = []
 for frame in df_lst:
     std_frame, pop_df = standardize_df(frame)
     label_df = std_frame["% Smokers"]
-    features_df = std_frame.drop(columns=["% Smokers"])
+    IV_df = std_frame["Cig Tax Rate"]
+    features_df = std_frame.drop(columns=["% Smokers", "Cig Tax Rate"])
     pop_weights = np.array(pop_df)
     X = np.array(features_df)
+    IV = np.array(IV_df)
     y = np.array(label_df)
-    values = [X, y, pop_weights]
+    values = [X, IV, y, pop_weights]
     params_lst.append(values)
 #print(params_lst)
 
