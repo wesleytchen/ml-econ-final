@@ -72,7 +72,7 @@ relevantfeatures = ["State", "County", "Population", "% Smokers", "% Adults with
 "% American Indian & Alaska Native", "% Hispanic", "% Non-Hispanic White", "% Not Proficient in English", "% Homeowners", "% Broadband Access", 
 "Firearm Fatalities Rate", "Crude Rate", "% Enrolled in Free or Reduced Lunch", "Segregation Index", "Median Household Income", "Average Grade Performance (Reading)", 
 "Average Grade Performance (Math)", "High School Graduation Rate", "% Uninsured", "% Insufficient Sleep", "% Limited Access to Healthy Foods", "% Food Insecure", 
-"% Adults with Diabetes", "% Frequent Mental Distress", "% Frequent Physical Distress", "Life Expectancy"]
+"% Adults with Diabetes", "% Frequent Mental Distress", "% Frequent Physical Distress", "Life Expectancy", "Cig Tax Rate"]
 
 abspath = os.getcwd()
 parent_path = str(abspath)
@@ -125,8 +125,11 @@ def concatenator(f1, f2):
 def createfinaldf():
     # Initialize final dataframe
     df = pd.DataFrame()
-
+    state_taxes = pd.read_csv(parent_path + '\\data\\cigarette_tax_rates.csv')
+    state_taxes["Cig Tax Rate"] = state_taxes["tax"] / state_taxes["cost"]
+    state_taxes = state_taxes.set_index("State")
     # Iterate through, clean, and concatenate dfs along rows
+
     for key in states.keys():
         path1 = parent_path + f"\\data\\{states[key]}.csv"
         path2 = parent_path + f"\\data\\{states[key]}2.csv"
@@ -138,38 +141,38 @@ def createfinaldf():
         # cleanratio(path2)
 
         statefinal = concatenator(path1, path2)
+        statefinal["Cig Tax Rate"] = state_taxes.loc[states[key]]["Cig Tax Rate"]
         df = pd.concat([df, statefinal], axis=0, ignore_index=True)
         # Once cigtax function exists, append to each df at this point
 
     # Keep only relevant features
     df = df[relevantfeatures]
+    
 
-    # Include null value counts
-    newrow = []
-    for column in df.columns:
-        newrow.append(df[column].isnull().sum())
-    df.loc["Null Values"] = newrow
-
-    df.to_csv(parent_path + "\\FinalDF.csv")
+    df.to_csv(parent_path + "\\TrimmedData.csv")
 
     return df
     
 def createcorrmatrix(frame):
     # Drop columns with too many missing items/incompatible data types, remove counties with null values
     frame.drop(columns=["Firearm Fatalities Rate", "Crude Rate", "High School Graduation Rate", "Average Grade Performance (Reading)",
-    "Average Grade Performance (Math)", "Segregation Index", "Presence of Water Violation", "% Uninsured"], inplace=True)
+    "Average Grade Performance (Math)", "Segregation Index", "% Uninsured"], inplace=True)
     # For some reason % uninsured when not removed gives a duplicate, fix this
-    print(frame.columns)
+    
+    frame['Presence of Water Violation'] = frame['Presence of Water Violation'].str.replace('Yes','1')
+    frame['Presence of Water Violation'] = frame['Presence of Water Violation'].str.replace('No','0')
+    frame['Presence of Water Violation'] = pd.to_numeric(frame['Presence of Water Violation'])
+
     frame.dropna(inplace=True)
-    frame = frame[:-1]
 
     # Fill in correlation values
     df = pd.DataFrame(columns=frame.columns.tolist()[3:])
     for col in frame.columns.tolist()[3:]:
         df.loc[col] = [frame[col].corr(frame[col2]) for col2 in frame.columns.tolist()[3:]]
 
-    # Write to CorrMatrix
+    # Write to CorrMatrix and FinalDF
     df.to_csv(parent_path + "\\CorrMatrix.csv")
+    frame.to_csv(parent_path + "\\FinalDF.csv")
 
     return frame
 
@@ -220,17 +223,12 @@ def adjdelta(frame):
         trim1 = np.array(row1[3:])
         trim2 = np.array(row2[3:])
 
-        if trim1.shape[0] == trim2.shape[0] == 48:
+        if trim1.shape[0] == trim2.shape[0] == (len(frame.columns) - 3):
             finalrow = [f"{county1}/{county2}"] + np.subtract(trim1, trim2).tolist()
-            print(len(finalrow))
-            print(finalrow)
             result.loc[len(result.index)] = finalrow
 
     result.to_csv(parent_path + "\\AdjacentDelta.csv")
 
-# final = createfinaldf()
-# corrdata = createcorrmatrix(final)
-# adjdelta(corrdata)
-
-# For queueing rows with certain counties: split each county with " County, " and " Parish, " delimiters, then take the first
-# one and use that to queue. Add filter for state as well
+final = createfinaldf()
+corrdata = createcorrmatrix(final)
+adjdelta(corrdata)
