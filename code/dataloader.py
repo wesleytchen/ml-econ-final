@@ -83,24 +83,10 @@ relevantfeatures = ["State", "County", "Population", "% Smokers", "% Adults with
 
 path = parent_path + 'data/'
 
-state_taxes_2017 = pd.read_csv(path + 'state_cigarette_rates_2017.csv')
-state_taxes_2018 = pd.read_csv(path + 'state_cigarette_rates_2018.csv')
-state_taxes_2019 = pd.read_csv(path + 'state_cigarette_rates_2019.csv')
-state_taxes_2020 = pd.read_csv(path + 'state_cigarette_rates_2020.csv')
-state_taxes_2021 = pd.read_csv(path + 'state_cigarette_rates_2021.csv')
-#print(state_taxes_2017.head())
+state_taxes = pd.read_csv(path + 'cigarette_tax_rates.csv')
+state_taxes["Cig Tax Rate"] = state_taxes["tax"] / state_taxes["cost"]
+state_taxes = state_taxes.set_index("State")
 
-yearly_tax_lst = [state_taxes_2017, state_taxes_2018, state_taxes_2019,
-                  state_taxes_2020, state_taxes_2021]
-
-tax_lst = []
-for x in yearly_tax_lst:
-    x_fixed = pd.DataFrame(np.concatenate((x.iloc[:, 0:2].values,
-                           x.iloc[:, 4:6].values)),
-                           columns=['State', 'Tax Rate'])
-    x_fixed = x_fixed.dropna(axis=0)
-    x_dict = x_fixed.set_index('State').to_dict()
-    tax_lst.append(x_dict)
 
 state_dict = {}
 for state in states_lst:
@@ -111,11 +97,6 @@ for state in states_lst:
     state_file = state_file.rename(columns=state_file.iloc[0]).drop(state_file.index[0])
     state_file2 = state_file2.rename(columns=state_file2.iloc[0]).drop(state_file2.index[0])
     state_file = pd.concat((state_file2, state_file), axis=1)
+    state_file["Cig Tax Rate"] = state_taxes.loc[states[state]]["Cig Tax Rate"]
     state_dict[state] = state_file
-    print(state_file["Average Grade Performance"])
-    for i, tax_year in enumerate(tax_lst):
-        year = 2017 + i
-        state_name = states[state]
-        tax_rate = tax_year['Tax Rate'][state_name]
-        state_dict[state]["cig_tax_" + str(year)] = tax_rate
-print(state_dict["AL"]["Average Grade Performance"])
+    #print(state_file["Cig Tax Rate"])
