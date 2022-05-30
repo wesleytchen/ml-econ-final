@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import os
 from pathlib import Path
+import cvxpy as cp
 from sklearn.preprocessing import StandardScaler
 
 abspath = os.path.abspath(os.getcwd())
@@ -49,15 +50,24 @@ for frame in df_lst:
     label_df = std_frame["% Smokers"]
     IV_df = std_frame["Cig Tax Rate"]
     features_df = std_frame.drop(columns=["% Smokers", "Cig Tax Rate"])
-    pop_weights = np.array(pop_df)
+    p = np.array([pop_df]).T
     X = np.array(features_df)
-    IV = np.array(IV_df)
-    y = np.array(label_df)
-    values = [X, IV, y, pop_weights]
+    IV = np.array([IV_df]).T
+    y = np.array([label_df]).T
+    values = [X, IV, y, p]
     params_lst.append(values)
-#print(params_lst)
+    print(y.shape)
+    print(IV.shape)
+    print(X.shape)
+    print(p.shape)
 
 
+for params in params_lst:
+    X, IV, y, p = params
+    lam = 0.02
+    B = cp.Variable(X.shape[1])
+    objective = cp.Minimize(cp.norm2(y - B @ X) ** 2 @ p + lam * cp.norm1(B))
+    print(np.shape(B))
 
 
 
