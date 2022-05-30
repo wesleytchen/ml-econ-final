@@ -76,22 +76,26 @@ def split_data(data, labels, p):
 #for params in params_lst:
 X, IV, y, p = params_lst[0]
 
-lams = np.linspace(0,2,10)
+lams = np.linspace(0,2,20)
 error_lst = []
+gen_params_lst = []
+for _ in range(10):
+    X_s, y_s, p_s = shuffle_data(X, y, p)
+    gen_params = split_data(X_s, y_s, p_s)
+    gen_params_lst.append(gen_params)
 for lam in lams:
     sum_error = 0
-    for _ in range(10):
-        X_s, IV_s, p_s = shuffle_data(X, IV, p)
-        train_X, train_IV, train_p, test_X, test_IV, test_p = split_data(X_s, IV_s, p_s)
+    for gen_params in gen_params_lst:
+        train_X, train_y, train_p, test_X, test_y, test_p = gen_params
         B = cp.Variable((train_X.shape[1], 1))
-        objective = cp.Minimize((train_p.T @ (train_IV - train_X @ B) ** 2) + lam * cp.norm1(B))
+        objective = cp.Minimize((train_p.T @ (train_y - train_X @ B) ** 2) + lam * cp.norm1(B))
         constraints = []
         prob = cp.Problem(objective, constraints)
         prob.solve()
         betas = np.array(B.value)
-        error = np.linalg.norm((test_IV - test_X @ betas))
+        error = np.linalg.norm((test_y - test_X @ betas))
         sum_error += error
-    error_lst.append(sum_error / 10)
+    error_lst.append(sum_error)
 print(error_lst)
 
 
