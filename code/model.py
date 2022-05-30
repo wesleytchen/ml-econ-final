@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import cvxpy as cp
 from sklearn.preprocessing import StandardScaler
+import matplotlib.pyplot as plt
 
 abspath = os.path.abspath(os.getcwd())
 finpath = Path(abspath).resolve().parent
@@ -56,18 +57,42 @@ for frame in df_lst:
     y = np.array([label_df]).T
     values = [X, IV, y, p]
     params_lst.append(values)
-    print(y.shape)
-    print(IV.shape)
-    print(X.shape)
-    print(p.shape)
 
+def shuffle_data(data, labels, p):
+    indices = np.random.permutation(len(data))
+    return data[indices], labels[indices], p[indices]
 
-for params in params_lst:
-    X, IV, y, p = params
-    lam = 0.02
-    B = cp.Variable(X.shape[1])
-    objective = cp.Minimize(cp.norm2(y - B @ X) ** 2 @ p + lam * cp.norm1(B))
-    print(np.shape(B))
+def split_data(data, labels, p):
+    size = len(data)
+    index_eighty = int(size*0.8)
+    train_data = data[:index_eighty]
+    train_labels = labels[:index_eighty]
+    train_p = p[:index_eighty]
+    test_data = data[index_eighty:]
+    test_labels = labels[index_eighty:]
+    test_p = p[index_eighty:]
+    return train_data, train_labels, train_p, test_data, test_labels, test_p
+
+#for params in params_lst:
+X, IV, y, p = params_lst[0]
+
+lams = np.linspace(0,2,10)
+error_lst = []
+for lam in lams:
+    sum_error = 0
+    for _ in range(10):
+        X_s, IV_s, p_s = shuffle_data(X, IV, p)
+        train_X, train_IV, train_p, test_X, test_IV, test_p = split_data(X_s, IV_s, p_s)
+        B = cp.Variable((train_X.shape[1], 1))
+        objective = cp.Minimize((train_p.T @ (train_IV - train_X @ B) ** 2) + lam * cp.norm1(B))
+        constraints = []
+        prob = cp.Problem(objective, constraints)
+        prob.solve()
+        betas = np.array(B.value)
+        error = np.linalg.norm((test_IV - test_X @ betas))
+        sum_error += error
+    error_lst.append(sum_error / 10)
+print(error_lst)
 
 
 
