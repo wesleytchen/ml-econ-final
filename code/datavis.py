@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+from scipy.stats import norm
 import re
 import os
 from pathlib import Path
@@ -168,10 +169,10 @@ def createcorrmatrix(frame):
     # Fill in correlation values
     df = pd.DataFrame(columns=frame.columns.tolist()[3:])
     for col in frame.columns.tolist()[3:]:
-        df.loc[col] = [frame[col].corr(frame[col2]) for col2 in frame.columns.tolist()[3:]]
+        df.loc[col] = [frame[col].cov(frame[col2]) for col2 in frame.columns.tolist()[3:]]
 
     # Write to CorrMatrix and FinalDF
-    df.to_csv(parent_path + "\\CorrMatrix.csv")
+    df.to_csv(parent_path + "\\CovMatrix.csv")
     frame.to_csv(parent_path + "\\FinalDF.csv")
 
     return frame
@@ -229,6 +230,33 @@ def adjdelta(frame):
 
     result.to_csv(parent_path + "\\AdjacentDelta.csv")
 
+def normmeans(frame):
+
+    normalfits = []
+    for column in frame.columns.tolist()[1:]:
+        data = frame[column].to_numpy()
+
+        mu, std = norm.fit(data)
+        normalfits.append(mu)
+
+    return normalfits
+
+def DGP():
+    frame = pd.read_csv(parent_path + "\\FinalDF.csv")
+    frame.drop(columns=["State", "County", "Population"], inplace=True)
+    means = np.array(normmeans(frame))
+    cov = pd.read_csv(parent_path + "\\CovMatrix.csv").to_numpy()[:, 1:]
+
+    data = np.random.multivariate_normal(means, cov, size=cov.shape[0])
+    
+    resultframe = pd.DataFrame(data, columns=frame.columns.tolist()[1:])
+    # print(resultframe)
+
+    return resultframe
+
 final = createfinaldf()
 corrdata = createcorrmatrix(final)
-adjdelta(corrdata)
+# adjdelta(corrdata)
+
+# df = DGP()
+# df.to_csv(parent_path + "\\GeneratedData.csv")
