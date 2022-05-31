@@ -167,9 +167,10 @@ def createcorrmatrix(frame):
     frame.dropna(inplace=True)
 
     # Fill in correlation values
-    df = pd.DataFrame(columns=frame.columns.tolist()[3:])
-    for col in frame.columns.tolist()[3:]:
-        df.loc[col] = [frame[col].cov(frame[col2]) for col2 in frame.columns.tolist()[3:]]
+    data = frame.drop(columns=["State", "County", "Population"]).to_numpy().T
+    print(data)
+    covmatrix = np.cov(data)
+    df = pd.DataFrame(covmatrix, columns=frame.columns.tolist()[3:])
 
     # Write to CorrMatrix and FinalDF
     df.to_csv(parent_path + "\\CovMatrix.csv")
